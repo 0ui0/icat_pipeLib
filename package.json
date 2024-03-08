@@ -1,0 +1,15 @@
+{
+  "name": "icat_pipelib",
+  "version": "1.0.0",
+  "description": "a easy pipeTool for javascript.",
+  "main": "pipeLib.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "pipe",
+    "pipeLib"
+  ],
+  "author": "Blue_sdo",
+  "license": "ISC"
+}
