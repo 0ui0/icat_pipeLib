@@ -1,7 +1,7 @@
 # Basic Useage
 
 ```
-let pipeLib = require("icat_pipeLib")
+let pipeLib = require("icat_pipelib")
 let push = pipeLib.mid(Array.prototype.push)
 let output = pipeLib.start([])(push)(3)(push)(4)(pipeLib.end)
 console.log(output)
