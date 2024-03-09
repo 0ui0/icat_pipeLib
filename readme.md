@@ -66,10 +66,10 @@ Count = { //a data sets tools
 count = lib.start(Count.init)()
 
 document.querySelector("#btn1").onclick = ()=>{
-  count(add)(1)(render)()
+  count(Count.add)(1)(Count.render)()
 }
 document.querySelector("#btn2").onclick = ()=>{
-  count(add)(2)(render)()
+  count(Count.add)(2)(Count.render)()
 }
 document.querySelector("#btn3").onclick = ()=>{
   console.log(count(lib.end))
