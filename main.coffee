@@ -1,6 +1,8 @@
 pipeLib = ->
 
 pipeLib.start = (fn)->
+  if (type = Object.prototype.toString.call(fn)) isnt "[object Function]"
+    throw new Error "arguments[0] need [object function] not #{type}"
   if fn.endSign
     fn.call @
   else

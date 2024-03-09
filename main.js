@@ -4,6 +4,10 @@ var pipeLib;
 pipeLib = function() {};
 
 pipeLib.start = function(fn) {
+  var type;
+  if ((type = Object.prototype.toString.call(fn)) !== "[object Function]") {
+    throw new Error(`arguments[0] need [object function] not ${type}`);
+  }
   if (fn.endSign) {
     return fn.call(this);
   } else {
