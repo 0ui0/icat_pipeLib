@@ -2,19 +2,36 @@
 
 ```
 let pipeLib = require("icat_pipelib")
-let push = pipeLib.mid(Array.prototype.push)
-let output = pipeLib.start([])(push)(3)(push)(4)(pipeLib.end)
-console.log(output)
+
+let newArr = function() {
+  return [];
+};
+
+let push = function(...args) {
+  this.push(...args);
+  return this;
+};
+
+console.log(pipeLib.start(newArr)()(push)(3)(pipeLib.print)()(push)(4)(pipeLib.end));
+//[3]
+//[3,4]
 ```
 
 you can create middleware by yourself like:
 
 ```
-let pop = function(){
-  this.pop()
-  return this
-}
-
-pipeLib.start([])(push)(3)(push)(4,5,6)(pop)()(pipeLib.end)
-
+let output = pipeLib.start(function(){return new Object()})()
+  (function(){
+    this.a = 12
+    return this
+  })()
+  (function(){
+    this.b = 15
+    return this
+  })()
+  (function(){
+    return this.a + this.b
+  })()
+  (pipeLib.end)
+console.log(output) //27
 ```
