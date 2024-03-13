@@ -1,6 +1,6 @@
 {
   "name": "icat_pipelib",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "a easy pipeTool for javascript.",
   "main": "pipeLib.js",
   "scripts": {
@@ -15,5 +15,8 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/0ui0/icat_pipeLib.git"
+  },
+  "dependencies": {
+    "icat_checktype": "^1.0.2"
   }
 }
