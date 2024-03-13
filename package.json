@@ -1,6 +1,6 @@
 {
   "name": "icat_pipelib",
-  "version": "2.0.1",
+  "version": "2.0.3",
   "description": "a easy pipeTool for javascript.",
   "main": "pipeLib.js",
   "scripts": {
