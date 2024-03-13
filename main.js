@@ -25,6 +25,9 @@ pipeLib.start = function(fn) {
     return {
       to: pipeLib.start.bind(() => {
         return fn(this, ...args);
+      }),
+      给: pipeLib.start.bind(() => {
+        return fn(this, ...args);
       })
     };
   };

@@ -13,6 +13,7 @@ pipeLib.start = (fn)->
     return @
   return (args...)=>
     to:pipeLib.start.bind => fn(@,args...)
+    给:pipeLib.start.bind => fn(@,args...)
   
   
 pipeLib.开始 = pipeLib.start
