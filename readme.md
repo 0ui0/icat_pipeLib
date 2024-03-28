@@ -1,5 +1,102 @@
 # Eating Introduction
 
+
+```javascript
+ // basic useage
+arrLib = {
+  new: (data, ...args) => {
+    return new Array(...args);
+  },
+  push: (data, ...args) => {
+    var tmp;
+    tmp = data();
+    tmp.push(...args);
+    return tmp;
+  },
+  shift: (data) => {
+    var tmp;
+    tmp = data();
+    tmp.shift();
+    return tmp;
+  },
+  toString: (data) => {
+    var tmp;
+    tmp = data();
+    return String(tmp);
+  }
+};
+
+strLib = {
+  toArray: (data, sign = ",") => {
+    var tmp;
+    tmp = data();
+    tmp = tmp.split(sign);
+    return tmp;
+  }
+};
+
+pipeLib.start(arrLib.new)(1, 2, 3)
+  .to(arrLib.push)(4, 5, 6)
+  .to(arrLib.shift)()
+  .to(arrLib.toString)()
+  .to(pipeLib.print)("array is") //arr is [2,3,4,5,6]
+  .to(strLib.toArray)()
+  .to(pipeLib.print)("become array")  //become array [ '2', '3', '4', '5', '6' ]
+  .to(pipeLib.end)(); 
+
+
+obj1 = pipeLib.start({
+  a: 12,
+  b: 5
+})();
+
+opr1 = obj1.to((ref) => {
+  var data;
+  data = ref(); //ref() -> object {a:12,b5} is reference
+  data.c = 20;
+  return data;
+})();
+
+opr2 = obj1.to((ref) => {
+  var data;
+  data = ref();
+  data.d = "hello";
+  return data;
+})();
+
+output1 = opr1.to(pipeLib.print)("output1").to(0)(); // { a: 12, b: 5, c: 20 }
+ 
+output2 = opr2.to(pipeLib.print)("output2").to(pipeLib.end)(); //{  a: 12, b: 5, c: 20, d: 'hello' }
+
+output3 = obj1.to(pipeLib.print)("output3").to(0)(); // { a: 12, b: 5, c: 20, d: 'hello' }
+
+console.log(output1 === output3); //true
+
+(async function() {  
+  //async useage
+  await pipeLib.start({
+    data: null
+  })().to(async(ref) => {
+    var data;
+    data = ref();
+    data.data = (await new Promise((res) => {
+      return setTimeout(() => {
+        return res("async data");
+      }, 1000);
+    }));
+    return data;
+  })().to(async(ref) => {
+    var data;
+    data = (await ref());
+    console.log(data);
+    return data;
+  })().to(0)();
+  return console.log(222);
+})();
+```
+
+
+
 This is a tool that helps us chain process data. We can create a dataset and then process it in a chained manner, with each step returning a function for the next processing stage until we encounter the end function pipeLib.end or input 0. Ultimately, it will return the processed dataset.
 
 You can manually store the steps in the chain to execute them in different places. In each chained function call, the first argument, either ref or data, is a function. Running this function allows you to access the data being passed through the chain.
@@ -25,71 +122,3 @@ In fact, there's a philosophy that suggests remembering only the fundamental kno
 推荐您将每次处理的中间函数单独封装成一个工具集，以便每次都可以使用函数名来使用它，这样可以使得链式处理的流程变得清晰易读，我们通过阅读函数名就很容易得知我们的代码正在做什么
 这个库本身不提供工具集，我认为元编程是有趣的，因为每一个小工具的实现都很简单，你应该在每个项目使用的时候直接编写它，而不是把进行封装。因为封装有记忆成本
 实际上，有一个理念是，只需要记忆最原始的js本身的知识，而忘记任何工具复杂冗长的使用方式，因为你可以每次手动编写和组合每一个“元组件”，包括这个工具本身的实现也并不复杂，现场手写也是一件容易得事情
-
-```javascript
-  // basic useage
-  // one
-  var obj1, opr1, opr2, output1, output2, output3, pipeLib;
-  pipeLib = require("icat_pipelib")
-  pipeLib.start(() => {
-    return [1, 2, 3, 4, 5];
-  })().to((data) => {
-    data = data();
-    data.push("hello");
-    return data;
-  })().to((data) => {
-    data = data();
-    data.shift();
-    return data;
-  })().to(pipeLib.print)().to(pipeLib.end)();
-
-  //two
-  obj1 = pipeLib.start({
-    a: 12,
-    b: 5
-  })();
-
-  opr1 = obj1.to((ref) => {
-    var data;
-    data = ref(); //ref() -> object {a:12,b5} is reference
-    data.c = 20;
-    return data;
-  })();
-
-  opr2 = obj1.to((ref) => {
-    var data;
-    data = ref();
-    data.d = "hello";
-    return data;
-  })();
-
-  output1 = opr1.to(pipeLib.print)().to(0)();
-
-  output2 = opr2.to(pipeLib.print)().to(pipeLib.end)();
-
-  output3 = obj1.to(pipeLib.print)().to(0)();
-
-  console.log(output1 === output3); //true
-
-  (async function() {  
-    //async useage
-    await pipeLib.start({
-      data: null
-    })().to(async(ref) => {
-      var data;
-      data = ref();
-      data.data = (await new Promise((res) => {
-        return setTimeout(() => {
-          return res("async data");
-        }, 1000);
-      }));
-      return data;
-    })().to(async(ref) => {
-      var data;
-      data = (await ref());
-      console.log(data);
-      return data;
-    })().to(0)();
-    return console.log(222);
-  })();
-```
