@@ -1,98 +1,130 @@
 # Eating Introduction
 
 
-```javascript
- // basic useage
-arrLib = {
-  new: (data, ...args) => {
-    return new Array(...args);
-  },
-  push: (data, ...args) => {
-    var tmp;
-    tmp = data();
-    tmp.push(...args);
-    return tmp;
-  },
-  shift: (data) => {
-    var tmp;
-    tmp = data();
-    tmp.shift();
-    return tmp;
-  },
-  toString: (data) => {
-    var tmp;
-    tmp = data();
-    return String(tmp);
-  }
-};
+```coffeescript
 
-strLib = {
-  toArray: (data, sign = ",") => {
-    var tmp;
-    tmp = data();
-    tmp = tmp.split(sign);
-    return tmp;
-  }
-};
 
-pipeLib.start(arrLib.new)(1, 2, 3)
+#【基本使用】
+
+arrLib =
+  new: (ref, buildArgs, runArgs) =>
+    new Array(buildArgs...)
+  push: (ref, buildArgs, runArgs) =>
+    tmp = ref()
+    tmp.push(buildArgs...)
+    return tmp
+  shift: (ref, buildArgs, runArgs) =>
+    tmp = ref()
+    tmp.shift()
+    return tmp
+  toString: (ref, buildArgs, runArgs) =>
+    tmp = ref()
+    return String(tmp)
+
+strLib =
+  toArray: (ref, buildArgs, runArgs) =>
+    tmp = ref()
+    sign = buildArgs[0] or ","
+    return tmp.split(sign)
+
+
+pipeLib(arrLib.new)(1, 2, 3)
   .to(arrLib.push)(4, 5, 6)
   .to(arrLib.shift)()
   .to(arrLib.toString)()
-  .to(pipeLib.print)("array is") //arr is [2,3,4,5,6]
+  .to(pipeLib.print)("array is")       # array is [ '2', '3', '4', '5', '6' ]
   .to(strLib.toArray)()
-  .to(pipeLib.print)("become array")  //become array [ '2', '3', '4', '5', '6' ]
-  .to(pipeLib.end)(); 
+  .to(pipeLib.print)("become array") # become array [ '2', '3', '4', '5', '6' ]
+  .to(pipeLib.end)()                 # 触发执行
 
 
-obj1 = pipeLib.start({
-  a: 12,
-  b: 5
-})();
+#【分支】
+obj1 = pipeLib(pipeLib.value)({ a: 12, b: 5 })
 
-opr1 = obj1.to((ref) => {
-  var data;
-  data = ref(); //ref() -> object {a:12,b5} is reference
-  data.c = 20;
-  return data;
-})();
+# 分支 1：修改 c
+opr1 = obj1.to((ref, buildArgs, runArgs) =>
+  data = ref() # 拿到的是对象引用
+  data.c = 20
+  return data
+)()
 
-opr2 = obj1.to((ref) => {
-  var data;
-  data = ref();
-  data.d = "hello";
-  return data;
-})();
+# 分支 2：修改 d
+opr2 = obj1.to((ref, buildArgs, runArgs) =>
+  data = ref()
+  data.d = "hello"
+  return data
+)()
 
-output1 = opr1.to(pipeLib.print)("output1").to(0)(); // { a: 12, b: 5, c: 20 }
- 
-output2 = opr2.to(pipeLib.print)("output2").to(pipeLib.end)(); //{  a: 12, b: 5, c: 20, d: 'hello' }
+# 验证引用污染现象（同源管道的副作用）
+output1 = opr1.to(pipeLib.print)("output1").to(0)()         # { a: 12, b: 5, c: 20, d: 'hello' }
+output2 = opr2.to(pipeLib.print)("output2").to(pipeLib.end)() # { a: 12, b: 5, c: 20, d: 'hello' }
+output3 = obj1.to(pipeLib.print)("output3").to(0)()         # { a: 12, b: 5, c: 20, d: 'hello' }
 
-output3 = obj1.to(pipeLib.print)("output3").to(0)(); // { a: 12, b: 5, c: 20, d: 'hello' }
+console.log(output1 is output3) # true，因为它们操作的是内存中的同一个引用对象
 
-console.log(output1 === output3); //true
 
-(async function() {  
-  //async useage
-  await pipeLib.start({
-    data: null
-  })().to(async(ref) => {
-    var data;
-    data = ref();
-    data.data = (await new Promise((res) => {
-      return setTimeout(() => {
-        return res("async data");
-      }, 1000);
-    }));
-    return data;
-  })().to(async(ref) => {
-    var data;
-    data = (await ref());
-    console.log(data);
-    return data;
-  })().to(0)();
-  return console.log(222);
-})();
+
+#【异步使用】
+do ->
+  await pipeLib(pipeLib.value)({ data: null })
+    # 模拟异步赋值算子
+    .to( (ref, buildArgs, runArgs) =>
+      data = ref()
+      data.data = await new Promise (res) =>
+        setTimeout =>
+          res("async data resolved")
+        , 1000
+      return data
+    )()
+    # 模拟普通异步拦截算子
+    .to( (ref, buildArgs, runArgs) =>
+      # 因为上游算子是 async 的，所以这里的 ref() 返回的是 Promise
+      # 手写算子需要显式 await 
+      data = await ref()
+      console.log "Async Data Caught: ", data
+      return data
+    )()
+    # 也可以直接用整合后的 print（它内部会自动嗅探 Promise，无需外部 await）
+    .to(pipeLib.print)("Final Output")
+    .to(0)() 
+    
+  console.log(222)
+
+
+ #【管道衔接】
+
+# 增加一个用于修改对象属性的测试工具库
+objLib = 
+  set: (ref, buildArgs, runArgs) =>
+    data = ref()
+    [key, val] = buildArgs
+    data[key] = val
+    return data
+
+# ================= 宏算子复用测试 (pipeLib.use) =================
+
+# 1. 组装并封存一个【通用数据加工】的子管道
+# 起手式的源头算子：直接透传外部（主管道）传入的参数 runArgs[0]
+processPipe = pipeLib( (ref, buildArgs, runArgs) => runArgs[0] )()
+  .to(objLib.set)("status", "processed")
+  .to(objLib.set)("timestamp", 1724900000000) # 模拟注入时间戳
+  .to(pipeLib.end) # 必须封存，产出高阶执行器
+
+
+# 2. 在主管道中通过 use 算子无缝接入
+mainPipe = pipeLib(pipeLib.value)({ user: "lamuda", action: "login" })
+  .to(objLib.set)("role", "admin")
+  .to(pipeLib.use)(processPipe) # 把上方封存的子管道像普通插件一样插进来
+  .to(pipeLib.print)("use result") 
+  .to(0) # 主管道封存
+
+# 运行主管道
+mainPipe() 
+# 预期输出: 
+# use result { user: 'lamuda', action: 'login', role: 'admin', status: 'processed', timestamp: 1724900000000 }
+
+
+
 ```
 
 

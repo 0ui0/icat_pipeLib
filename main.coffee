@@ -1,119 +1,68 @@
-pipeLib = ->
-checkType = require "icat_checktype"
-
-pipeLib.start = (fn)->
-  checkType arguments,[["function","asyncfunction","number","object"]],"pipeLib.start()"
-  data = null
-  if Object::toString.call(fn) is "[object Object]"
-    data = {fn...}
-    fn = ()=> data
-  if fn.endSign is 1
-    return fn(@)
+# 直接将 pipeLib 声明为主力组装函数
+pipeLib = (fn, prevTask = (->), layerIndex = 1) ->
   if fn is 0
-    return @
-  return (args...)=>
-    to:pipeLib.start.bind => fn(@,args...)
-    给:pipeLib.start.bind => fn(@,args...)
-  
-  
-pipeLib.开始 = pipeLib.start
+    return (runArgs...) -> prevTask(runArgs...)
+
+  if fn?.endSign is 1
+    return fn(@, prevTask, layerIndex)
+
+  return (buildArgs...) ->
+    currentTask = (runArgs...) ->
+      ref = -> prevTask(runArgs...)
+      try
+        # 核心：透传三元组参数
+        return fn(ref, buildArgs, runArgs)
+      catch err
+        if not err.pipeLayer?
+          fnName = fn.name or "Anonymous Function"
+          err.pipeLayer = layerIndex
+          err.message = "[Pipeline Layer #{layerIndex} <#{fnName}> Error] -> " + err.message
+        throw err
+
+    return {
+      # 递归调用 pipeLib 本身
+      to: (nextFn) -> pipeLib(nextFn, currentTask, layerIndex + 1)
+      _:  (nextFn) -> pipeLib(nextFn, currentTask, layerIndex + 1)
+    }
 
 
-pipeLib.print = (data,args...)->
-  if args[0]
-    console.log args...,data()
-  else
-    console.log data()
-  data()
-pipeLib.输出 = pipeLib.print
 
-pipeLib.printx = (data)->
-  console.log await data()
-  await data()
-pipeLib.异步输出 = pipeLib.printx
+pipeLib.use = (ref, buildArgs, runArgs) =>
+  [subPipelineExecutor] = buildArgs
+  upperData = ref()
+  if upperData? and typeof upperData.then is 'function'
+    return upperData.then (resolvedData) => subPipelineExecutor(resolvedData)
+  return subPipelineExecutor(upperData)
 
-pipeLib.end = (data)=>
-  data
+pipeLib.print = (ref, buildArgs, runArgs) =>
+  result = ref() # 严格单次决议
+  prefix = buildArgs[0]
+
+  if result? and typeof result.then is 'function'
+    return result.then (resolvedData) =>
+      if prefix then console.log(prefix, resolvedData) else console.log(resolvedData)
+      return resolvedData
+
+  if prefix then console.log(prefix, result) else console.log(result)
+  return result
+
+pipeLib.end = (ctx, prevTask, layerIndex) =>
+  return (runArgs...) => prevTask(runArgs...)
 pipeLib.end.endSign = 1
-pipeLib.结束 = pipeLib.end
 
-###
-# basic useage
-
-arrLib =
-  new:(data,args...)=>
-    new Array(args...)
-  push:(data,args...)=>
-    tmp = data()
-    tmp.push(args...)
-    return tmp
-  shift:(data)=>
-    tmp = data()
-    tmp.shift()
-    return tmp
-  toString:(data)=>
-    tmp = data()
-    return String tmp
-  
-
-strLib =
-  toArray:(data,sign=",")=>
-    tmp = data()
-    tmp = tmp.split sign
-    return tmp
-  
-
-pipeLib.start(arrLib.new)(1,2,3)
-  .to(arrLib.push)(4,5,6)
-  .to(arrLib.shift)()
-  .to(arrLib.toString)()
-  .to(pipeLib.print)("array is") #arr is [2,3,4,5,6]
-  .to(strLib.toArray)()
-  .to(pipeLib.print)("become array") #become array [ '2', '3', '4', '5', '6' ]
-  .to(pipeLib.end)()
+# 辅助算子：用于直接注入一个静态数据作为管道源头
+pipeLib.value = (ref, buildArgs, runArgs) => buildArgs[0]
 
 
 
 
-obj1 = pipeLib.start({a:12,b:5})()
 
-opr1 = obj1.to((ref)=>
-    data = ref() #ref() -> object {a:12,b5} is reference
-    data.c = 20
-    return data
-  )()
 
-opr2 = obj1.to((ref)=>
-  data = ref()
-  data.d = "hello"
-  data
-)()
 
-output1 = opr1.to(pipeLib.print)("output1").to(0)()  # { a: 12, b: 5, c: 20 }
-output2 = opr2.to(pipeLib.print)("output2").to(pipeLib.end)() #{  a: 12, b: 5, c: 20, d: 'hello' }
-output3 = obj1.to(pipeLib.print)("output3").to(0)() # { a: 12, b: 5, c: 20, d: 'hello' }
-console.log(output1 is output3) #true
 
-#async useage
-do->
-  await pipeLib.start({data:null})()
-    .to((ref)=>
-      data = ref()
-      data.data = await new Promise (res)=>
-        setTimeout =>
-          res("async data")
-        ,1000
-      data
-    )()
-    .to((ref)=>
-      data = await ref()
-      console.log data
-      data
-    )()
-    .to(0)()
-  console.log(222)
-###
 
 
 module.exports = pipeLib
+
+
 
