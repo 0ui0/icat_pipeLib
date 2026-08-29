@@ -1,4 +1,3 @@
-# 直接将 pipeLib 声明为主力组装函数
 pipeLib = (fn, prevTask = (->), layerIndex = 1) ->
   if fn is 0
     return (runArgs...) -> prevTask(runArgs...)
@@ -24,6 +23,8 @@ pipeLib = (fn, prevTask = (->), layerIndex = 1) ->
       to: (nextFn) -> pipeLib(nextFn, currentTask, layerIndex + 1)
       _:  (nextFn) -> pipeLib(nextFn, currentTask, layerIndex + 1)
     }
+
+pipeLib._ = pipeLib.to = pipeLib
 
 
 
